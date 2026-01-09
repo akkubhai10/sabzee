@@ -9,39 +9,37 @@
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/style.css">
     
-    <!-- Admin Specific Styles -->
     <style>
         body { background-color: #f4f7f6; }
-        .admin-header { background: var(--secondary-color); color: white; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .admin-nav { display: flex; justify-content: space-around; background: #fff; padding: 10px 0; border-bottom: 1px solid #ddd; }
-        .admin-nav-btn { background: none; border: none; font-weight: 600; color: #777; padding: 5px 10px; border-bottom: 3px solid transparent; }
-        .admin-nav-btn.active { color: var(--secondary-color); border-bottom-color: var(--secondary-color); }
         
+        /* Stats Dashboard */
+        .stats-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .stat-card { flex: 1; background: #fff; padding: 15px; border-radius: 8px; border-bottom: 4px solid var(--secondary-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
+        .stat-val { font-size: 1.5rem; font-weight: bold; color: #2c3e50; display: block; }
+        .stat-label { font-size: 0.8rem; color: #777; text-transform: uppercase; }
+
+        /* Order Card Fixes */
         .order-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #ccc; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .order-card.PLACED { border-left-color: #e74c3c; } 
-        .order-card.PACKING { border-left-color: #f39c12; }
-        .order-card.PACKED { border-left-color: #3498db; }
+        .order-card.PACKED { border-left-color: #f39c12; }
         .order-card.OUT_FOR_DELIVERY { border-left-color: #2ecc71; } 
 
-        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: white; margin-bottom: 5px; }
-        .bg-PLACED { background-color: #e74c3c; }
-        .bg-PACKING { background-color: #f39c12; }
-        .bg-PACKED { background-color: #3498db; }
+        /* Tabs & Nav */
+        .admin-nav { display: flex; justify-content: space-around; background: #fff; padding: 10px 0; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 90; }
+        .admin-nav-btn { background: none; border: none; font-weight: 600; color: #777; padding: 10px 20px; border-bottom: 3px solid transparent; }
+        .admin-nav-btn.active { color: var(--secondary-color); border-bottom-color: var(--secondary-color); }
+
+        /* Pincode Chips */
+        .pin-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .pin-chip { background: white; border: 1px solid #2ecc71; color: #27ae60; padding: 5px 12px; border-radius: 20px; font-weight: bold; display: flex; align-items: center; }
+        .pin-chip i { margin-left: 8px; cursor: pointer; color: #e74c3c; font-size: 18px; }
+
+        /* Inventory List Items */
+        .inv-row { background: white; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
+        .inv-details { display: flex; align-items: center; gap: 10px; }
+        .inv-details img { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; border: 1px solid #ddd; }
         
-        .action-row { display: flex; gap: 10px; margin-top: 10px; }
-        .fab { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--secondary-color); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 90; cursor: pointer; }
-        
-        .inventory-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; border-bottom: 1px solid #eee; }
-        .inventory-item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 10px; }
-        
-        /* Categories Management Styles */
-        .cat-row { background: white; border-radius: 6px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
-        .btn-icon { background: none; border: none; cursor: pointer; color: #777; padding: 5px; }
-        .btn-icon:hover { color: #333; }
-        
-        /* Pincode Chip */
-        .pin-chip { display: inline-flex; align-items: center; background: white; padding: 5px 10px; border-radius: 20px; margin: 5px; border: 1px solid #ccc; font-size: 0.9rem; }
-        .pin-chip i { font-size: 16px; margin-left: 8px; color: var(--danger-color); cursor: pointer; }
+        .fab { position: fixed; bottom: 80px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: var(--secondary-color); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 95; cursor: pointer; font-size: 30px; }
     </style>
     
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -53,182 +51,171 @@
         <div class="auth-container">
             <h2>Admin Login</h2>
             <form id="admin-login-form">
-                <input type="email" id="admin-email" placeholder="Admin Email" required>
+                <input type="email" id="admin-email" placeholder="Email" required>
                 <input type="password" id="admin-password" placeholder="Password" required>
-                <button type="submit" class="btn-primary full-width">Access Dashboard</button>
+                <button type="submit" class="btn-primary full-width">Login</button>
             </form>
         </div>
     </section>
 
-    <!-- DASHBOARD -->
+    <!-- MAIN DASHBOARD -->
     <div id="admin-dashboard" class="hidden">
         
-        <header class="admin-header">
+        <header style="background: var(--secondary-color); color: white; padding: 15px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>SabziXpress Admin</h3>
+                <h3>Dashboard</h3>
                 <span class="material-icons-round" onclick="auth.logout()">logout</span>
             </div>
-            <div style="font-size: 0.8rem; margin-top: 5px;">
-                FCM Status: <span id="fcm-status-indicator" style="font-weight:bold;">⚪ Checking...</span>
-            </div>
+            <div id="fcm-status" style="font-size:0.8rem; opacity:0.9;">Checking Notifications...</div>
         </header>
 
         <nav class="admin-nav">
             <button class="admin-nav-btn active" onclick="adminUI.switchTab('orders')">Orders</button>
-            <button class="admin-nav-btn" onclick="adminUI.switchTab('inventory')">Inventory</button>
+            <button class="admin-nav-btn" onclick="adminUI.switchTab('inventory')">Items</button>
             <button class="admin-nav-btn" onclick="adminUI.switchTab('settings')">Settings</button>
         </nav>
 
-        <main id="admin-content" style="padding: 15px; padding-bottom: 80px;">
+        <main id="admin-content" style="padding: 15px; padding-bottom: 150px;">
             
-            <!-- 1. ORDERS TAB -->
+            <!-- 1. ORDERS & STATS TAB -->
             <div id="tab-orders" class="tab-view">
-                <div class="filter-bar" style="margin-bottom:10px;">
-                    <select id="order-filter" onchange="admin.renderOrders()" style="width:100%; padding:8px;">
-                        <option value="ALL">All Active Orders</option>
+                
+                <!-- NEW: Daily Stats -->
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <span class="stat-val" id="stat-count">0</span>
+                        <span class="stat-label">Orders Today</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-val" id="stat-sales">₹0</span>
+                        <span class="stat-label">Sales Today</span>
+                    </div>
+                </div>
+
+                <div class="filter-bar" style="margin-bottom:15px;">
+                    <select id="order-filter" onchange="admin.renderOrders()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                        <option value="ALL">View All Active Orders</option>
                         <option value="PLACED">Placed (New)</option>
                         <option value="PACKING">Packing</option>
-                        <option value="PACKED">Ready to Assign</option>
-                        <option value="OUT_FOR_DELIVERY">On The Way</option>
+                        <option value="OUT_FOR_DELIVERY">On the Way</option>
                     </select>
                 </div>
-                <div id="orders-container">
-                    <!-- Orders JS se aayenge -->
-                </div>
+                
+                <div id="orders-container"></div>
             </div>
 
             <!-- 2. INVENTORY TAB -->
             <div id="tab-inventory" class="tab-view hidden">
                 
-                <!-- Category Section -->
-                <div style="background: #eef2f3; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <!-- Categories -->
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                         <h4>Categories</h4>
-                        <button class="btn-primary" style="font-size:0.8rem; padding: 5px 10px;" onclick="adminUI.openCategoryModal()">+ New Category</button>
+                        <button onclick="adminUI.openCategoryModal()" style="padding:2px 10px; font-size:0.8rem; background:#333; color:white; border:none; border-radius:4px;">+ Add New</button>
                     </div>
-                    <div id="admin-categories-list">
-                        <!-- Category list render here -->
+                    <div id="admin-categories-list" style="overflow-x:auto; display:flex; gap:10px; padding-bottom:5px;">
+                        <!-- Categories chips here -->
                     </div>
                 </div>
-                
-                <hr style="border:0; border-top:1px solid #ddd; margin: 15px 0;">
 
-                <!-- Product Section -->
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h4>Products</h4>
-                    <select id="inv-cat-filter" onchange="admin.filterInventory()" style="padding: 5px;">
-                        <option value="all">All Categories</option>
+                <hr style="border:0; border-top:1px dashed #ccc; margin:15px 0;">
+
+                <!-- Products -->
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <h4>Product List</h4>
+                    <select id="inv-cat-filter" onchange="admin.filterInventory()" style="padding:5px;">
+                        <option value="all">All Items</option>
                     </select>
                 </div>
-                <div id="admin-products-list" style="margin-top:10px;"></div>
-                
-                <!-- Floating Add Product Button -->
-                <div class="fab" onclick="adminUI.openProductModal()">
-                    <span class="material-icons-round">add</span>
+
+                <div id="admin-products-list">
+                    <!-- Products rendered here -->
                 </div>
+
+                <!-- BIG PLUS BUTTON -->
+                <div class="fab" onclick="adminUI.openProductModal()">+</div>
             </div>
 
             <!-- 3. SETTINGS TAB -->
             <div id="tab-settings" class="tab-view hidden">
-                <!-- Delivery Charges -->
-                <div class="card" style="padding:15px; margin-bottom:15px; background:white; border-radius:8px;">
-                    <h4>Configuration</h4>
-                    <label>Base Delivery Charge (₹)</label>
-                    <input type="number" id="conf-del-charge" style="width:100%; padding:8px; margin:5px 0;">
+                
+                <div class="card" style="padding:15px; background:white; border-radius:10px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                    <h4>Money & Charges</h4>
+                    <p style="color:#777; font-size:0.8rem;">Changes will apply to new orders immediately.</p>
                     
-                    <label>Surge Charge (Extra ₹)</label>
-                    <input type="number" id="conf-surge" style="width:100%; padding:8px; margin:5px 0;">
+                    <label style="margin-top:10px; display:block;">Delivery Charge (₹)</label>
+                    <input type="number" id="conf-del-charge" style="width:100%; padding:10px; font-weight:bold;">
                     
-                    <button class="btn-primary full-width" onclick="admin.saveConfig()" style="margin-top:10px;">Save Charges</button>
+                    <label style="margin-top:10px; display:block;">Surge/Rain Charge (Extra ₹)</label>
+                    <input type="number" id="conf-surge" style="width:100%; padding:10px; font-weight:bold;">
+                    
+                    <button class="btn-primary full-width" onclick="admin.saveConfig()" style="margin-top:15px;">Update Charges</button>
                 </div>
 
-                <!-- Pincodes -->
-                <div class="card" style="padding:15px; margin-bottom:15px; background:white; border-radius:8px;">
-                    <h4>Supported Pincodes</h4>
-                    <div style="display:flex; gap:5px; margin:10px 0;">
-                        <input type="tel" id="new-pincode" placeholder="e.g. 110001" maxlength="6" style="flex:1; padding:8px;">
+                <div class="card" style="padding:15px; background:white; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                    <h4>Serviceable Pincodes</h4>
+                    <div style="display:flex; gap:5px; margin-top:10px;">
+                        <input type="tel" id="new-pincode" placeholder="Add Pincode" maxlength="6" style="flex:1; padding:10px;">
                         <button class="btn-primary" onclick="admin.addPincode()">Add</button>
                     </div>
-                    <div id="pincode-list" style="display:flex; flex-wrap:wrap;"></div>
-                </div>
-
-                <!-- Partners -->
-                <div class="card" style="padding:15px; background:white; border-radius:8px;">
-                    <h4>Delivery Partners List</h4>
-                    <div id="partners-list"></div>
-                    <button class="btn-secondary full-width" onclick="admin.addPartner()" style="margin-top:10px;">+ Add Partner Instruction</button>
+                    <div id="pincode-list" class="pin-container">
+                        <!-- Pincode Chips will appear here -->
+                    </div>
                 </div>
             </div>
 
         </main>
-
     </div>
 
-    <!-- =========================
-         MODALS
-    ========================== -->
-
-    <!-- Category Modal -->
-    <div id="modal-category" class="modal hidden">
-        <div class="modal-content slide-up">
-            <h3 id="modal-cat-title">Add Category</h3>
-            <input type="hidden" id="cat-id">
-            
-            <label>Category Name</label>
-            <input type="text" id="cat-name" placeholder="e.g. Vegetables">
-            
-            <label>Image URL</label>
-            <input type="text" id="cat-img" placeholder="https://...">
-
-            <label>Status</label>
-            <select id="cat-status" style="width:100%; padding:8px; margin-bottom:10px;">
-                <option value="ACTIVE">Active</option>
-                <option value="DISABLED">Disabled</option>
-            </select>
-            
-            <button class="btn-primary full-width" onclick="admin.saveCategory()" style="margin-top:15px;">Save Category</button>
-            <button class="btn-secondary full-width" onclick="adminUI.closeModal('modal-category')" style="margin-top:5px;">Cancel</button>
-        </div>
-    </div>
-
-    <!-- Delivery Assignment Modal -->
-    <div id="modal-assign-delivery" class="modal hidden">
-        <div class="modal-content slide-up">
-            <h3>Assign Delivery Partner</h3>
-            <div id="assign-list-container" style="max-height: 300px; overflow-y:auto;"></div>
-            <button class="btn-secondary full-width" onclick="adminUI.closeModal('modal-assign-delivery')" style="margin-top:10px;">Cancel</button>
-        </div>
-    </div>
-
+    <!-- MODALS (Hidden by default) -->
+    
     <!-- Product Modal -->
     <div id="modal-product" class="modal hidden">
-        <div class="modal-content">
-            <h3 id="modal-product-title">Add Product</h3>
+        <div class="modal-content slide-up">
+            <h3>Manage Product</h3>
             <input type="hidden" id="prod-id">
             
-            <label>Name</label>
-            <input type="text" id="prod-name">
+            <label>Name</label><input type="text" id="prod-name" placeholder="Item Name">
             
-            <label>Category</label>
-            <select id="prod-category" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd;"></select>
+            <label>Category</label><select id="prod-category" style="width:100%; padding:10px; border:1px solid #ccc; background:white; margin-bottom:10px;"></select>
             
-            <label>Price (₹)</label>
-            <input type="number" id="prod-price">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1"><label>Price (₹)</label><input type="number" id="prod-price"></div>
+                <div style="flex:1"><label>Unit (kg/gm)</label><input type="text" id="prod-unit"></div>
+            </div>
             
-            <label>Unit (e.g., 1 kg)</label>
-            <input type="text" id="prod-unit">
+            <label>Image URL</label><input type="text" id="prod-img" value="https://cdn-icons-png.flaticon.com/512/372/372986.png">
             
-            <label>Image URL</label>
-            <input type="text" id="prod-img">
-            
-            <label>Stock</label>
-            <select id="prod-stock" style="width:100%; padding:8px;">
-                <option value="true">In Stock</option>
+            <label>Availability</label>
+            <select id="prod-stock" style="width:100%; padding:10px;">
+                <option value="true">In Stock (Available)</option>
                 <option value="false">Out of Stock</option>
             </select>
 
-            <button class="btn-primary full-width" onclick="admin.saveProduct()" style="margin-top:15px;">Save Product</button>
-            <button class="btn-secondary full-width" onclick="adminUI.closeModal('modal-product')" style="margin-top:5px;">Cancel</button>
+            <button class="btn-primary full-width" onclick="admin.saveProduct()" style="margin-top:20px;">Save Product</button>
+            <button class="btn-secondary full-width" onclick="document.getElementById('modal-product').classList.add('hidden')" style="margin-top:10px;">Close</button>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="modal-category" class="modal hidden">
+        <div class="modal-content">
+            <h3>Category</h3>
+            <input type="hidden" id="cat-id">
+            <input type="text" id="cat-name" placeholder="Category Name" style="width:100%; padding:10px; margin-top:10px;">
+            <input type="text" id="cat-img" placeholder="Image URL" value="https://via.placeholder.com/100" style="width:100%; padding:10px; margin-top:10px;">
+            
+            <button class="btn-primary full-width" onclick="admin.saveCategory()" style="margin-top:20px;">Save Category</button>
+            <button class="btn-secondary full-width" onclick="document.getElementById('modal-category').classList.add('hidden')" style="margin-top:10px;">Cancel</button>
+        </div>
+    </div>
+    
+    <!-- Rider Assign Modal -->
+    <div id="modal-assign-delivery" class="modal hidden">
+        <div class="modal-content">
+            <h3>Assign Delivery</h3>
+            <div id="assign-list-container"></div>
+            <button class="btn-secondary full-width" onclick="document.getElementById('modal-assign-delivery').classList.add('hidden')" style="margin-top:10px;">Cancel</button>
         </div>
     </div>
 
@@ -238,97 +225,76 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
-
     <script src="js/firebase.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/admin.js"></script>
-
+    
     <script>
-        // Admin UI Helpers
+        // Simple UI Helper in HTML directly for Modal toggles
         const adminUI = {
-            switchTab: (tabName) => {
-                document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
-                document.querySelectorAll('.admin-nav-btn').forEach(el => el.classList.remove('active'));
-                
-                document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-                event.target.classList.add('active');
+            switchTab: (id) => {
+                document.querySelectorAll('.tab-view').forEach(e => e.classList.add('hidden'));
+                document.querySelectorAll('.admin-nav-btn').forEach(e => e.classList.remove('active'));
+                document.getElementById('tab-' + id).classList.remove('hidden');
+                event.currentTarget.classList.add('active');
             },
-
-            openCategoryModal: (catData = null) => {
-                document.getElementById('modal-category').classList.remove('hidden');
-                if(catData) {
-                    document.getElementById('modal-cat-title').innerText = "Edit Category";
-                    document.getElementById('cat-id').value = catData.id;
-                    document.getElementById('cat-name').value = catData.name;
-                    document.getElementById('cat-img').value = catData.imageUrl;
-                    document.getElementById('cat-status').value = catData.status;
+            openCategoryModal: (data = null) => {
+                const m = document.getElementById('modal-category');
+                m.classList.remove('hidden');
+                if(data) {
+                    document.getElementById('cat-id').value = data.id;
+                    document.getElementById('cat-name').value = data.name;
+                    document.getElementById('cat-img').value = data.imageUrl;
                 } else {
-                    document.getElementById('modal-cat-title').innerText = "New Category";
-                    document.getElementById('cat-id').value = "";
-                    document.getElementById('cat-name').value = "";
-                    document.getElementById('cat-img').value = "";
-                    document.getElementById('cat-status').value = "ACTIVE";
+                    document.getElementById('cat-id').value = '';
+                    document.getElementById('cat-name').value = '';
                 }
             },
-
-            openProductModal: (prodData = null) => {
-                const modal = document.getElementById('modal-product');
-                modal.classList.remove('hidden');
+            openProductModal: (data = null) => {
+                const m = document.getElementById('modal-product');
+                m.classList.remove('hidden');
                 
-                // Refresh Category Select Options inside Modal
-                const catSelect = document.getElementById('prod-category');
-                catSelect.innerHTML = '';
-                let hasCat = false;
-                
-                if(window.admin && window.admin.categories) {
-                    Object.keys(window.admin.categories).forEach(key => {
-                        const c = window.admin.categories[key];
-                        // Only show active categories or all? Let's show all
-                        const opt = document.createElement('option');
-                        opt.value = key;
-                        opt.innerText = c.name;
-                        catSelect.appendChild(opt);
-                        hasCat = true;
-                    });
+                // Populate Category Select
+                const sel = document.getElementById('prod-category');
+                sel.innerHTML = '';
+                let hasCats = false;
+                if(window.admin.categories) {
+                     Object.keys(window.admin.categories).forEach(k => {
+                         const opt = document.createElement('option');
+                         opt.value = k; 
+                         opt.innerText = window.admin.categories[k].name;
+                         sel.appendChild(opt);
+                         hasCats = true;
+                     });
                 }
+                if(!hasCats) { alert("Please Create a Category first!"); m.classList.add('hidden'); return; }
 
-                if(!hasCat) {
-                    const opt = document.createElement('option');
-                    opt.innerText = "Please Create a Category First!";
-                    catSelect.appendChild(opt);
-                }
-
-                if(prodData) {
-                    document.getElementById('modal-product-title').innerText = "Edit Product";
-                    document.getElementById('prod-id').value = prodData.id;
-                    document.getElementById('prod-name').value = prodData.name;
-                    document.getElementById('prod-price').value = prodData.price;
-                    document.getElementById('prod-unit').value = prodData.unitLabel;
-                    document.getElementById('prod-img').value = prodData.imageUrl;
-                    document.getElementById('prod-category').value = prodData.categoryId;
-                    document.getElementById('prod-stock').value = prodData.availableQty > 0 ? "true" : "false";
+                if(data) {
+                    document.getElementById('prod-id').value = data.id;
+                    document.getElementById('prod-name').value = data.name;
+                    document.getElementById('prod-price').value = data.price;
+                    document.getElementById('prod-unit').value = data.unitLabel;
+                    document.getElementById('prod-img').value = data.imageUrl;
+                    document.getElementById('prod-category').value = data.categoryId;
+                    document.getElementById('prod-stock').value = data.availableQty > 0 ? "true" : "false";
                 } else {
-                    document.getElementById('modal-product-title').innerText = "Add Product";
-                    document.getElementById('prod-id').value = "";
-                    document.getElementById('prod-name').value = "";
-                    document.getElementById('prod-price').value = "";
-                    document.getElementById('prod-unit').value = "1 kg";
-                    document.getElementById('prod-img').value = "https://";
-                    document.getElementById('prod-stock').value = "true";
+                    document.getElementById('prod-id').value = '';
+                    document.getElementById('prod-name').value = '';
+                    document.getElementById('prod-price').value = '';
                 }
             },
-
-            closeModal: (id) => {
-                document.getElementById(id).classList.add('hidden');
+            openAssignModal: (id) => {
+                document.getElementById('modal-assign-delivery').classList.remove('hidden');
+                admin.loadRidersForModal(id);
             },
-
             toast: (msg) => {
-                const div = document.createElement('div');
-                div.className = 'toast show';
-                div.innerText = msg;
-                document.getElementById('toast-container').appendChild(div);
-                setTimeout(() => div.remove(), 3000);
+                const t = document.getElementById('toast-container');
+                const d = document.createElement('div');
+                d.className = 'toast show';
+                d.innerText = msg;
+                t.appendChild(d);
+                setTimeout(()=>d.remove(), 3000);
             }
         };
     </script>
