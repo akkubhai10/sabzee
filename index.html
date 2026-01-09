@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SabziXpress</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Theme Color for Browser Address Bar -->
+    <meta name="theme-color" content="#2ecc71">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#2ecc71">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Icons (Material Icons for simplicity) -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+<body>
+
+    <!-- =========================
+         LOADING OVERLAY
+    ========================== -->
+    <div id="loading-screen" class="full-screen-loader">
+        <div class="spinner"></div>
+        <h2>SabziXpress</h2>
+        <p>Delivery in minutes...</p>
+    </div>
+
+    <!-- =========================
+         AUTH SCREEN (Login/Register)
+    ========================== -->
+    <section id="auth-screen" class="hidden">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h1>SabziXpress</h1>
+                <p>Fresh vegetables at your doorstep</p>
+            </div>
+            
+            <div id="auth-forms">
+                <!-- Login Form -->
+                <form id="login-form">
+                    <h3>Login</h3>
+                    <input type="email" id="login-email" placeholder="Email Address" required>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                    <button type="submit" class="btn-primary">Login</button>
+                    <p class="switch-auth">New here? <span onclick="app.toggleAuth('register')">Create Account</span></p>
+                </form>
+
+                <!-- Register Form -->
+                <form id="register-form" class="hidden">
+                    <h3>Sign Up</h3>
+                    <input type="text" id="reg-name" placeholder="Full Name" required>
+                    <input type="tel" id="reg-mobile" placeholder="Mobile Number" required>
+                    <input type="email" id="reg-email" placeholder="Email Address" required>
+                    <input type="password" id="reg-password" placeholder="Password (min 6 chars)" required>
+                    <button type="submit" class="btn-primary">Sign Up</button>
+                    <p class="switch-auth">Already have an account? <span onclick="app.toggleAuth('login')">Login</span></p>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================
+         PINCODE CHECK SCREEN
+    ========================== -->
+    <section id="pincode-screen" class="hidden full-overlay">
+        <div class="pincode-card">
+            <span class="material-icons-round location-icon">place</span>
+            <h2>Location Check</h2>
+            <p>Enter your pincode to check delivery availability.</p>
+            <input type="tel" id="check-pincode" placeholder="e.g. 110001" maxlength="6">
+            <button id="btn-check-pincode" class="btn-primary">Check Availability</button>
+            <p id="pincode-error" class="error-text hidden"></p>
+        </div>
+    </section>
+
+    <!-- =========================
+         MAIN APP CONTAINER
+    ========================== -->
+    <div id="app-container" class="hidden">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-top">
+                <div class="location-info" onclick="app.changeLocation()">
+                    <span class="material-icons-round">room</span>
+                    <div>
+                        <span class="location-label">Delivering to</span>
+                        <strong id="user-pincode-display">...</strong>
+                    </div>
+                    <span class="material-icons-round small">expand_more</span>
+                </div>
+                <div class="user-profile-icon" onclick="app.navigateTo('profile')">
+                    <span class="material-icons-round">account_circle</span>
+                </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="search-bar-container">
+                <span class="material-icons-round">search</span>
+                <input type="text" id="product-search" placeholder='Search "Potato" or "Onion"'>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Views -->
+        <main id="main-content">
+            
+            <!-- HOME VIEW -->
+            <div id="view-home" class="view active">
+                
+                <!-- Categories -->
+                <div class="section-title">Shop by Category</div>
+                <div id="categories-grid" class="horizontal-scroll">
+                    <!-- Categories injected by JS -->
+                    <div class="skeleton-category"></div>
+                    <div class="skeleton-category"></div>
+                    <div class="skeleton-category"></div>
+                </div>
+
+                <!-- Product List -->
+                <div class="section-title">Fresh Vegetables</div>
+                <div id="products-grid" class="products-grid">
+                    <!-- Products injected by JS -->
+                    <div class="skeleton-product"></div>
+                    <div class="skeleton-product"></div>
+                </div>
+            </div>
+
+            <!-- ORDERS VIEW -->
+            <div id="view-orders" class="view hidden">
+                <div class="section-header">
+                    <h2>My Orders</h2>
+                </div>
+                <div id="orders-list">
+                    <!-- Orders injected by JS -->
+                </div>
+            </div>
+
+            <!-- PROFILE VIEW -->
+            <div id="view-profile" class="view hidden">
+                <div class="profile-header">
+                    <h2 id="profile-name">User Name</h2>
+                    <p id="profile-mobile">+91 XXXXX XXXXX</p>
+                </div>
+                <div class="profile-menu">
+                    <button class="menu-item" onclick="app.changeLocation()">
+                        <span class="material-icons-round">edit_location</span> Change Pincode
+                    </button>
+                    <button class="menu-item logout" onclick="auth.logout()">
+                        <span class="material-icons-round">logout</span> Logout
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Floating Cart Bar (Visible when cart > 0) -->
+        <div id="floating-cart" class="floating-cart hidden" onclick="app.openCart()">
+            <div class="cart-info">
+                <span id="cart-count">0 ITEMS</span>
+                <span class="dot">•</span>
+                <span id="cart-total">₹0</span>
+            </div>
+            <div class="cart-action">
+                View Cart <span class="material-icons-round">shopping_basket</span>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-target="view-home" onclick="app.navigateTo('home')">
+                <span class="material-icons-round">home</span>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" data-target="view-orders" onclick="app.navigateTo('orders')">
+                <span class="material-icons-round">receipt_long</span>
+                <span>Orders</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- =========================
+         CART & CHECKOUT MODAL
+    ========================== -->
+    <div id="cart-modal" class="modal hidden">
+        <div class="modal-content slide-up">
+            <div class="modal-header">
+                <h3>Your Cart</h3>
+                <span class="material-icons-round close-btn" onclick="app.closeCart()">close</span>
+            </div>
+            
+            <div class="modal-body">
+                <div id="cart-items-container">
+                    <!-- Cart items injected here -->
+                </div>
+
+                <!-- Bill Details -->
+                <div class="bill-details hidden" id="bill-section">
+                    <h4>Bill Details</h4>
+                    <div class="bill-row"><span>Item Total</span> <span id="bill-item-total">₹0</span></div>
+                    <div class="bill-row"><span>Delivery Charge</span> <span id="bill-delivery">₹0</span></div>
+                    <div class="bill-row total"><span>To Pay</span> <span id="bill-grand-total">₹0</span></div>
+                </div>
+
+                <!-- Delivery Address Input -->
+                <div class="address-section hidden" id="address-section">
+                    <h4>Delivery Address</h4>
+                    <textarea id="delivery-address" placeholder="House No, Floor, Building, Landmark..." rows="3"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="payment-method">
+                    <label><input type="radio" name="pay-mode" value="cod" checked> Cash on Delivery</label>
+                    <label><input type="radio" name="pay-mode" value="upi"> UPI on Delivery</label>
+                </div>
+                <button id="btn-place-order" class="btn-primary full-width" onclick="orders.placeOrder()">
+                    Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- =========================
+         SCRIPTS
+    ========================== -->
+    <!-- Firebase Libraries (v8 CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+
+    <!-- App Logic -->
+    <script src="js/firebase.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/inventory.js"></script>
+    <script src="js/orders.js"></script>
+    
+    <!-- Main UI/Router Script -->
+    <script>
+        // Simple UI Router Logic for Single Page Feel
+        const app = {
+            state: {
+                currentView: 'home',
+                cart: {}, // { productId: qty }
+                products: {},
+                categories: {},
+                userPincode: null
+            },
+            
+            toggleAuth: (mode) => {
+                document.getElementById('login-form').classList.toggle('hidden', mode !== 'login');
+                document.getElementById('register-form').classList.toggle('hidden', mode !== 'register');
+            },
+
+            navigateTo: (viewName) => {
+                // Hide all views
+                document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+
+                // Show target
+                document.getElementById(`view-${viewName}`).classList.remove('hidden');
+                
+                // Update nav state
+                const navBtn = document.querySelector(`.nav-btn[data-target="view-${viewName}"]`);
+                if(navBtn) navBtn.classList.add('active');
+
+                // Special logic
+                if(viewName === 'orders' && typeof orders !== 'undefined') {
+                    orders.loadUserOrders(); 
+                }
+            },
+
+            openCart: () => {
+                document.getElementById('cart-modal').classList.remove('hidden');
+                if(typeof orders !== 'undefined') orders.renderCart();
+            },
+
+            closeCart: () => {
+                document.getElementById('cart-modal').classList.add('hidden');
+            },
+            
+            changeLocation: () => {
+                document.getElementById('pincode-screen').classList.remove('hidden');
+                document.getElementById('app-container').classList.add('hidden');
+            },
+
+            toast: (msg) => {
+                const div = document.createElement('div');
+                div.className = 'toast show';
+                div.innerText = msg;
+                document.getElementById('toast-container').appendChild(div);
+                setTimeout(() => div.remove(), 3000);
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "SabziXpress",
+  "short_name": "SabziXpress",
+  "description": "Fresh Vegetables Delivered in Minutes",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#2ecc71",
+  "orientation": "portrait",
+  "scope": "/",
+  "gcm_sender_id": "537431620130",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/372/372986.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/372/372986.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "permissions": [
+    "gcm"
+  ]
+}

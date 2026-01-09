@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Delivery Partner App</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <meta name="theme-color" content="#2980b9">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Specific Delivery Styles -->
+    <style>
+        body { background-color: #f0f2f5; }
+        .delivery-header { background: #2980b9; color: white; padding: 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .status-toggle { display: flex; justify-content: center; margin-top: 10px; }
+        .online-dot { height: 10px; width: 10px; background-color: #2ecc71; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px #2ecc71; }
+        
+        .task-card { background: white; border-radius: 12px; margin: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .customer-info { margin-bottom: 20px; border-bottom: 1px dashed #ddd; padding-bottom: 15px; }
+        .info-row { display: flex; align-items: flex-start; margin-bottom: 12px; }
+        .info-row .material-icons-round { margin-right: 12px; color: #2980b9; }
+        
+        .action-big-btn { width: 100%; padding: 15px; font-size: 1.1rem; border-radius: 8px; font-weight: bold; margin-top: 10px; border: none; cursor: pointer; color: white; transition: transform 0.1s; }
+        .btn-deliver { background-color: #27ae60; box-shadow: 0 4px 0 #219150; }
+        .btn-deliver:active { transform: translateY(4px); box-shadow: 0 0 0; }
+        
+        .btn-call { background-color: #34495e; color: white; padding: 8px 15px; border-radius: 20px; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; }
+
+        .empty-state { text-align: center; padding: 50px 20px; color: #7f8c8d; }
+        .empty-state .material-icons-round { font-size: 64px; margin-bottom: 10px; color: #bdc3c7; }
+    </style>
+    
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+<body>
+
+    <!-- =========================
+         LOGIN SCREEN (Shared Style)
+    ========================== -->
+    <section id="auth-screen" class="full-screen-loader">
+        <div class="auth-container">
+            <h2 style="color: #2980b9;">Delivery Partner</h2>
+            <p>Login to start receiving orders</p>
+            <form id="delivery-login-form">
+                <input type="email" id="del-email" placeholder="Partner Email" required>
+                <input type="password" id="del-password" placeholder="Password" required>
+                <button type="submit" class="btn-primary full-width" style="background:#2980b9;">Start Shift</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- =========================
+         MAIN INTERFACE
+    ========================== -->
+    <div id="delivery-dashboard" class="hidden">
+        
+        <header class="delivery-header">
+            <h3>SabziXpress Partner</h3>
+            <div class="status-toggle">
+                <span class="online-dot"></span> Online • Ready
+            </div>
+            <div style="position:absolute; top:20px; right:20px; cursor:pointer;" onclick="auth.logout()">
+                <span class="material-icons-round">logout</span>
+            </div>
+        </header>
+
+        <main id="tasks-container">
+            <!-- No Orders State -->
+            <div id="empty-tasks" class="empty-state">
+                <span class="material-icons-round">moped</span>
+                <h3>No Active Deliveries</h3>
+                <p>Relax! You will get a notification when an order is assigned to you.</p>
+            </div>
+
+            <!-- Active Order Card (Dynamically Injected) -->
+            <div id="active-task-card" class="task-card hidden">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span class="status-badge bg-PACKED" id="task-status">ASSIGNED</span>
+                    <span style="font-weight:bold; color:#e74c3c;" id="task-amt">₹0</span>
+                </div>
+                
+                <div class="customer-info">
+                    <h2 id="cust-name">Customer Name</h2>
+                    
+                    <div class="info-row">
+                        <span class="material-icons-round">phone</span>
+                        <div>
+                            <span id="cust-mobile">+91 XXXXX</span><br>
+                            <a id="btn-call-cust" href="#" class="btn-call">Call Customer</a>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="material-icons-round">place</span>
+                        <div id="cust-address">
+                            Flat No, Building, Area...
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #f8f9fa; padding:10px; border-radius:8px; margin-bottom:20px;">
+                    <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#777;">ORDER ITEMS</h4>
+                    <ul id="task-items-list" style="padding-left:20px; margin:0; font-size:0.9rem;">
+                        <!-- Items LI -->
+                    </ul>
+                </div>
+
+                <div id="payment-section" class="hidden">
+                    <h4 style="text-align:center; margin-bottom:10px;">Collect Payment</h4>
+                    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:10px;">
+                         <button class="btn-secondary" onclick="delivery.markPaid('CASH')">Cash Received</button>
+                         <button class="btn-secondary" onclick="delivery.markPaid('UPI')">UPI Received</button>
+                    </div>
+                </div>
+
+                <button id="btn-main-action" class="action-big-btn btn-deliver" onclick="delivery.advanceOrder()">
+                    PICK UP ORDER
+                </button>
+            </div>
+        </main>
+
+    </div>
+
+    <div id="toast-container"></div>
+
+    <!-- =========================
+         SCRIPTS
+    ========================== -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+
+    <script src="js/firebase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/delivery.js"></script>
+
+    <script>
+        const ui = {
+            toast: (msg) => {
+                const div = document.createElement('div');
+                div.className = 'toast show';
+                div.innerText = msg;
+                document.getElementById('toast-container').appendChild(div);
+                setTimeout(() => div.remove(), 3000);
+            }
+        };
+        
+        // Check Auth on Load is handled by auth.js calling init
+        document.addEventListener('DOMContentLoaded', () => {
+             // Logic mostly handled in delivery.js
+        });
+    </script>
+</body>
+</html>

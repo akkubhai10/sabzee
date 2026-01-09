@@ -1,0 +1,39 @@
+:root {
+    /* Brand Colors (Fresh Green & Modern Black) */
+    --primary-color: #27ae60;    /* Vibrant Green for Primary Actions */
+    --secondary-color: #2ecc71;  /* Lighter Green for Accents */
+    
+    --background-color: #f8f9fa; /* Light Grey Background */
+    --surface-color: #ffffff;    /* White Cards */
+    
+    --text-color: #2d3436;       /* Dark Grey for Text */
+    --text-muted: #636e72;       /* Light Grey for Secondary Text */
+    
+    --danger-color: #e74c3c;     /* Red for Errors/Delete */
+    --warning-color: #f1c40f;    /* Yellow for Alerts */
+    --info-color: #3498db;       /* Blue for Information */
+    
+    /* UI Spacing & Radius */
+    --border-radius: 12px;
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    
+    /* Font Weights */
+    --fw-regular: 400;
+    --fw-medium: 500;
+    --fw-bold: 700;
+}
+
+/* Dark Mode Support (Optional Future Proofing) */
+@media (prefers-color-scheme: dark) {
+    /* 
+       Currently disabled to strictly follow the specific Fresh/White 
+       Blinkit/Zepto style requested, but variables are set up here 
+       if needed later.
+       
+       :root {
+           --background-color: #121212;
+           --surface-color: #1e1e1e;
+           --text-color: #dfe6e9;
+       }
+    */
+}
