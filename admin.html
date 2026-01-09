@@ -4,16 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SabziXpress Admin</title>
-    
-    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    
     <meta name="theme-color" content="#2c3e50">
-
-    <!-- Styles -->
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/style.css">
-    <!-- Inline Admin Specific Overrides -->
+    
+    <!-- Admin Specific Styles -->
     <style>
         body { background-color: #f4f7f6; }
         .admin-header { background: var(--secondary-color); color: white; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -22,10 +18,10 @@
         .admin-nav-btn.active { color: var(--secondary-color); border-bottom-color: var(--secondary-color); }
         
         .order-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #ccc; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .order-card.PLACED { border-left-color: #e74c3c; } /* Red - Urgent */
-        .order-card.PACKING { border-left-color: #f39c12; } /* Orange */
-        .order-card.PACKED { border-left-color: #3498db; } /* Blue */
-        .order-card.OUT_FOR_DELIVERY { border-left-color: #2ecc71; } /* Green */
+        .order-card.PLACED { border-left-color: #e74c3c; } 
+        .order-card.PACKING { border-left-color: #f39c12; }
+        .order-card.PACKED { border-left-color: #3498db; }
+        .order-card.OUT_FOR_DELIVERY { border-left-color: #2ecc71; } 
 
         .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: white; margin-bottom: 5px; }
         .bg-PLACED { background-color: #e74c3c; }
@@ -35,18 +31,24 @@
         .action-row { display: flex; gap: 10px; margin-top: 10px; }
         .fab { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--secondary-color); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 90; cursor: pointer; }
         
-        /* Inventory List */
         .inventory-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; border-bottom: 1px solid #eee; }
         .inventory-item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 10px; }
+        
+        /* Categories Management Styles */
+        .cat-row { background: white; border-radius: 6px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
+        .btn-icon { background: none; border: none; cursor: pointer; color: #777; padding: 5px; }
+        .btn-icon:hover { color: #333; }
+        
+        /* Pincode Chip */
+        .pin-chip { display: inline-flex; align-items: center; background: white; padding: 5px 10px; border-radius: 20px; margin: 5px; border: 1px solid #ccc; font-size: 0.9rem; }
+        .pin-chip i { font-size: 16px; margin-left: 8px; color: var(--danger-color); cursor: pointer; }
     </style>
     
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 <body>
 
-    <!-- =========================
-         LOGIN SCREEN
-    ========================== -->
+    <!-- AUTH SCREEN -->
     <section id="auth-screen" class="full-screen-loader">
         <div class="auth-container">
             <h2>Admin Login</h2>
@@ -58,9 +60,7 @@
         </div>
     </section>
 
-    <!-- =========================
-         DASHBOARD
-    ========================== -->
+    <!-- DASHBOARD -->
     <div id="admin-dashboard" class="hidden">
         
         <header class="admin-header">
@@ -69,7 +69,7 @@
                 <span class="material-icons-round" onclick="auth.logout()">logout</span>
             </div>
             <div style="font-size: 0.8rem; margin-top: 5px;">
-                FCM Status: <span id="fcm-status-indicator">⚪ Checking...</span>
+                FCM Status: <span id="fcm-status-indicator" style="font-weight:bold;">⚪ Checking...</span>
             </div>
         </header>
 
@@ -93,25 +93,36 @@
                     </select>
                 </div>
                 <div id="orders-container">
-                    <!-- Orders injected via JS -->
-                    <p style="text-align:center; color:#999; margin-top:20px;">Waiting for orders...</p>
+                    <!-- Orders JS se aayenge -->
                 </div>
             </div>
 
             <!-- 2. INVENTORY TAB -->
             <div id="tab-inventory" class="tab-view hidden">
-                <h4>Categories</h4>
-                <div id="admin-categories-list" style="margin-bottom: 20px;"></div>
                 
+                <!-- Category Section -->
+                <div style="background: #eef2f3; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4>Categories</h4>
+                        <button class="btn-primary" style="font-size:0.8rem; padding: 5px 10px;" onclick="adminUI.openCategoryModal()">+ New Category</button>
+                    </div>
+                    <div id="admin-categories-list">
+                        <!-- Category list render here -->
+                    </div>
+                </div>
+                
+                <hr style="border:0; border-top:1px solid #ddd; margin: 15px 0;">
+
+                <!-- Product Section -->
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h4>Products</h4>
                     <select id="inv-cat-filter" onchange="admin.filterInventory()" style="padding: 5px;">
                         <option value="all">All Categories</option>
                     </select>
                 </div>
-                <div id="admin-products-list"></div>
+                <div id="admin-products-list" style="margin-top:10px;"></div>
                 
-                <!-- Floating Add Button -->
+                <!-- Floating Add Product Button -->
                 <div class="fab" onclick="adminUI.openProductModal()">
                     <span class="material-icons-round">add</span>
                 </div>
@@ -119,34 +130,33 @@
 
             <!-- 3. SETTINGS TAB -->
             <div id="tab-settings" class="tab-view hidden">
-                <div class="card" style="padding:15px; margin-bottom:15px;">
+                <!-- Delivery Charges -->
+                <div class="card" style="padding:15px; margin-bottom:15px; background:white; border-radius:8px;">
                     <h4>Configuration</h4>
                     <label>Base Delivery Charge (₹)</label>
-                    <input type="number" id="conf-del-charge">
+                    <input type="number" id="conf-del-charge" style="width:100%; padding:8px; margin:5px 0;">
                     
                     <label>Surge Charge (Extra ₹)</label>
-                    <input type="number" id="conf-surge">
+                    <input type="number" id="conf-surge" style="width:100%; padding:8px; margin:5px 0;">
                     
-                    <button class="btn-primary full-width" onclick="admin.saveConfig()" style="margin-top:10px;">Save Config</button>
+                    <button class="btn-primary full-width" onclick="admin.saveConfig()" style="margin-top:10px;">Save Charges</button>
                 </div>
 
-                <div class="card" style="padding:15px; margin-bottom:15px;">
+                <!-- Pincodes -->
+                <div class="card" style="padding:15px; margin-bottom:15px; background:white; border-radius:8px;">
                     <h4>Supported Pincodes</h4>
-                    <div id="pincode-list" style="margin-bottom:10px; display:flex; flex-wrap:wrap; gap:5px;"></div>
-                    <div style="display:flex; gap:5px;">
-                        <input type="text" id="new-pincode" placeholder="Add Pincode" style="flex:1">
+                    <div style="display:flex; gap:5px; margin:10px 0;">
+                        <input type="tel" id="new-pincode" placeholder="e.g. 110001" maxlength="6" style="flex:1; padding:8px;">
                         <button class="btn-primary" onclick="admin.addPincode()">Add</button>
                     </div>
+                    <div id="pincode-list" style="display:flex; flex-wrap:wrap;"></div>
                 </div>
 
-                <div class="card" style="padding:15px;">
-                    <h4>Delivery Partners</h4>
+                <!-- Partners -->
+                <div class="card" style="padding:15px; background:white; border-radius:8px;">
+                    <h4>Delivery Partners List</h4>
                     <div id="partners-list"></div>
-                    <div style="display:flex; gap:5px; margin-top:10px;">
-                        <input type="text" id="new-partner-name" placeholder="Name" style="flex:1">
-                        <input type="tel" id="new-partner-phone" placeholder="Mobile" style="flex:1">
-                        <button class="btn-primary" onclick="admin.addPartner()">Add</button>
-                    </div>
+                    <button class="btn-secondary full-width" onclick="admin.addPartner()" style="margin-top:10px;">+ Add Partner Instruction</button>
                 </div>
             </div>
 
@@ -158,18 +168,39 @@
          MODALS
     ========================== -->
 
+    <!-- Category Modal -->
+    <div id="modal-category" class="modal hidden">
+        <div class="modal-content slide-up">
+            <h3 id="modal-cat-title">Add Category</h3>
+            <input type="hidden" id="cat-id">
+            
+            <label>Category Name</label>
+            <input type="text" id="cat-name" placeholder="e.g. Vegetables">
+            
+            <label>Image URL</label>
+            <input type="text" id="cat-img" placeholder="https://...">
+
+            <label>Status</label>
+            <select id="cat-status" style="width:100%; padding:8px; margin-bottom:10px;">
+                <option value="ACTIVE">Active</option>
+                <option value="DISABLED">Disabled</option>
+            </select>
+            
+            <button class="btn-primary full-width" onclick="admin.saveCategory()" style="margin-top:15px;">Save Category</button>
+            <button class="btn-secondary full-width" onclick="adminUI.closeModal('modal-category')" style="margin-top:5px;">Cancel</button>
+        </div>
+    </div>
+
     <!-- Delivery Assignment Modal -->
     <div id="modal-assign-delivery" class="modal hidden">
         <div class="modal-content slide-up">
             <h3>Assign Delivery Partner</h3>
-            <div id="assign-list-container" style="max-height: 300px; overflow-y:auto;">
-                <!-- List injected here -->
-            </div>
+            <div id="assign-list-container" style="max-height: 300px; overflow-y:auto;"></div>
             <button class="btn-secondary full-width" onclick="adminUI.closeModal('modal-assign-delivery')" style="margin-top:10px;">Cancel</button>
         </div>
     </div>
 
-    <!-- Product Edit/Add Modal -->
+    <!-- Product Modal -->
     <div id="modal-product" class="modal hidden">
         <div class="modal-content">
             <h3 id="modal-product-title">Add Product</h3>
@@ -179,19 +210,19 @@
             <input type="text" id="prod-name">
             
             <label>Category</label>
-            <select id="prod-category"></select>
+            <select id="prod-category" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd;"></select>
             
             <label>Price (₹)</label>
             <input type="number" id="prod-price">
             
-            <label>Unit (e.g., 1 kg, 500 gm)</label>
+            <label>Unit (e.g., 1 kg)</label>
             <input type="text" id="prod-unit">
             
             <label>Image URL</label>
             <input type="text" id="prod-img">
             
-            <label>Stock Status</label>
-            <select id="prod-stock">
+            <label>Stock</label>
+            <select id="prod-stock" style="width:100%; padding:8px;">
                 <option value="true">In Stock</option>
                 <option value="false">Out of Stock</option>
             </select>
@@ -201,12 +232,8 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div id="toast-container"></div>
 
-    <!-- =========================
-         SCRIPTS
-    ========================== -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -218,6 +245,7 @@
     <script src="js/admin.js"></script>
 
     <script>
+        // Admin UI Helpers
         const adminUI = {
             switchTab: (tabName) => {
                 document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
@@ -225,28 +253,50 @@
                 
                 document.getElementById(`tab-${tabName}`).classList.remove('hidden');
                 event.target.classList.add('active');
+            },
 
-                // Refresh data if needed
-                if(tabName === 'orders') admin.renderOrders();
-                if(tabName === 'inventory') admin.loadInventoryUI();
-                if(tabName === 'settings') admin.loadSettings();
+            openCategoryModal: (catData = null) => {
+                document.getElementById('modal-category').classList.remove('hidden');
+                if(catData) {
+                    document.getElementById('modal-cat-title').innerText = "Edit Category";
+                    document.getElementById('cat-id').value = catData.id;
+                    document.getElementById('cat-name').value = catData.name;
+                    document.getElementById('cat-img').value = catData.imageUrl;
+                    document.getElementById('cat-status').value = catData.status;
+                } else {
+                    document.getElementById('modal-cat-title').innerText = "New Category";
+                    document.getElementById('cat-id').value = "";
+                    document.getElementById('cat-name').value = "";
+                    document.getElementById('cat-img').value = "";
+                    document.getElementById('cat-status').value = "ACTIVE";
+                }
             },
 
             openProductModal: (prodData = null) => {
                 const modal = document.getElementById('modal-product');
                 modal.classList.remove('hidden');
                 
-                // Populate categories dropdown
+                // Refresh Category Select Options inside Modal
                 const catSelect = document.getElementById('prod-category');
                 catSelect.innerHTML = '';
-                // Assuming admin.categories is available
+                let hasCat = false;
+                
                 if(window.admin && window.admin.categories) {
                     Object.keys(window.admin.categories).forEach(key => {
+                        const c = window.admin.categories[key];
+                        // Only show active categories or all? Let's show all
                         const opt = document.createElement('option');
                         opt.value = key;
-                        opt.innerText = window.admin.categories[key].name;
+                        opt.innerText = c.name;
                         catSelect.appendChild(opt);
+                        hasCat = true;
                     });
+                }
+
+                if(!hasCat) {
+                    const opt = document.createElement('option');
+                    opt.innerText = "Please Create a Category First!";
+                    catSelect.appendChild(opt);
                 }
 
                 if(prodData) {
@@ -264,7 +314,7 @@
                     document.getElementById('prod-name').value = "";
                     document.getElementById('prod-price').value = "";
                     document.getElementById('prod-unit').value = "1 kg";
-                    document.getElementById('prod-img').value = "https://via.placeholder.com/100";
+                    document.getElementById('prod-img').value = "https://";
                     document.getElementById('prod-stock').value = "true";
                 }
             },
@@ -281,11 +331,6 @@
                 setTimeout(() => div.remove(), 3000);
             }
         };
-
-        // Initialize Admin Notification Listener
-        document.addEventListener('DOMContentLoaded', () => {
-             // In a real scenario, we'd check if user is admin in auth state change
-        });
     </script>
 </body>
 </html>
