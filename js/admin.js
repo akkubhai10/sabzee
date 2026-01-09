@@ -1,276 +1,311 @@
 /**
- * SabziXpress - Final Admin Logic (Fixes for Stats, Inventory & Config)
+ * SabziXpress - Admin Controller (Full Logic)
+ * Ensures robust reading of Order Data, Inventory, and Settings.
  */
 
 const admin = {
     ordersData: {},
-    inventoryData: {},
-    categories: {},
+    categoriesData: {},
+    productsData: {},
     configData: {},
 
     init: () => {
-        console.log("Admin Dashboard Loaded...");
-        admin.checkNotifications();
+        console.log("Admin Loaded... syncing data.");
+        // Initialize listeners
         admin.listenOrders();
-        admin.listenInventory(); // Fetches Products & Categories
-        admin.listenSettings();  // Fetches Pincodes & Prices
+        admin.listenInventory();
+        admin.listenConfig();
     },
 
-    checkNotifications: () => {
-        const el = document.getElementById('fcm-status');
-        if(Notification.permission === 'granted') el.innerHTML = "🟢 Alerts Active";
-        else el.innerHTML = `<span onclick="notifications.requestPermission()" style="cursor:pointer; color:#f1c40f">⚪ Tap to Enable Alerts</span>`;
-    },
-
-    // ================= ORDERS & STATS =================
+    // ============================================
+    //  ORDERS & STATS
+    // ============================================
 
     listenOrders: () => {
-        db.ref('orders').limitToLast(100).on('value', snap => {
+        db.ref('orders').orderByChild('createdAt').limitToLast(100).on('value', snap => {
             admin.ordersData = snap.val() || {};
             admin.renderOrders();
-            admin.calculateDailyStats();
+            admin.calcStats();
         });
     },
 
-    calculateDailyStats: () => {
+    calcStats: () => {
         const todayStr = new Date().toDateString();
-        let totalSales = 0;
-        let todayOrders = 0;
+        let total = 0;
+        let count = 0;
 
-        Object.values(admin.ordersData).forEach(order => {
-            const orderDate = new Date(order.createdAt).toDateString();
-            if(orderDate === todayStr && order.status !== 'CANCELLED') {
-                totalSales += (order.amount.grandTotal || 0);
-                todayOrders++;
+        Object.values(admin.ordersData).forEach(o => {
+            if(!o.createdAt) return;
+            const d = new Date(o.createdAt).toDateString();
+            if(d === todayStr && o.status !== 'CANCELLED') {
+                total += (o.amount.grandTotal || 0);
+                count++;
             }
         });
-
-        document.getElementById('stat-count').innerText = todayOrders;
-        document.getElementById('stat-sales').innerText = `₹${totalSales}`;
+        
+        // Update DOM safely
+        if(document.getElementById('stat-sales')) document.getElementById('stat-sales').innerText = `₹${total}`;
+        if(document.getElementById('stat-count')) document.getElementById('stat-count').innerText = count;
     },
 
     renderOrders: () => {
+        const list = document.getElementById('orders-list');
         const filter = document.getElementById('order-filter').value;
-        const div = document.getElementById('orders-container');
-        div.innerHTML = '';
-        
-        const orders = Object.entries(admin.ordersData)
-            .sort((a,b) => b[1].createdAt - a[1].createdAt); // Newest First
+        list.innerHTML = '';
 
-        if(orders.length === 0) div.innerHTML = '<p class="text-center" style="padding:20px;">No Orders Found</p>';
+        const arr = Object.entries(admin.ordersData).sort((a,b) => b[1].createdAt - a[1].createdAt);
 
-        orders.forEach(([key, o]) => {
-            if(filter !== 'ALL' && o.status !== filter) return;
+        if(arr.length === 0) {
+            list.innerHTML = `<div class="text-center" style="padding:40px; color:#888;">No Active Orders</div>`;
+            return;
+        }
 
-            // Simple HTML construction
-            const date = new Date(o.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            let btn = '';
+        arr.forEach(([key, order]) => {
+            if(filter !== 'ALL' && order.status !== filter) return;
+            // Also hide closed if ALL
+            if(filter === 'ALL' && order.status === 'CLOSED') return;
+
+            let btnAction = '';
             
-            if(o.status === 'PLACED') btn = `<button class="btn-primary" onclick="admin.updateOrder('${key}','PACKING')">Confirm Order</button>`;
-            else if(o.status === 'PACKING') btn = `<button class="btn-primary" style="background:#2980b9" onclick="admin.updateOrder('${key}','PACKED')">Mark Packed</button>`;
-            else if(o.status === 'PACKED') btn = `<button class="btn-primary" style="background:#f39c12; color:black" onclick="adminUI.openAssignModal('${key}')">Assign Rider</button>`;
-            
-            div.innerHTML += `
-                <div class="order-card ${o.status}">
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:5px;">
-                        <span>#${key.slice(-4)} (${o.customerName})</span>
-                        <span>₹${o.amount.grandTotal}</span>
-                    </div>
-                    <div style="font-size:0.9rem; margin-bottom:10px;">
-                        ${o.address}, <b>${o.pincode}</b> <br>
-                        <span style="color:#777">${date} • ${o.paymentMethod.toUpperCase()}</span>
-                    </div>
-                    <div class="action-row">${btn}</div>
+            // State Machine for Buttons
+            if(order.status === 'PLACED') {
+                btnAction = `<button class="btn-primary" onclick="admin.setStatus('${key}','PACKING')">ACCEPT & PACK</button>`;
+            } else if (order.status === 'PACKING') {
+                btnAction = `<button class="btn-primary" style="background:#2980b9" onclick="admin.setStatus('${key}','PACKED')">MARK PACKED</button>`;
+            } else if (order.status === 'PACKED') {
+                btnAction = `<button class="btn-primary" style="background:#f39c12; color:#000" onclick="admin.openRiderModal('${key}')">ASSIGN RIDER</button>`;
+            } else {
+                btnAction = `<span style="font-weight:bold; color:green">${order.status}</span>`;
+            }
+
+            // Items List
+            let itemStr = '';
+            if(order.items) order.items.forEach(i => itemStr += `${i.qty} x ${i.name} `);
+
+            const card = document.createElement('div');
+            card.className = `order-card ${order.status}`; // Uses style.css color codes
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span class="bold">#${key.slice(-4)} ${order.customerName}</span>
+                    <span class="bold">₹${order.amount.grandTotal}</span>
                 </div>
+                <div style="font-size:0.9rem; margin-bottom:10px;">
+                    ${order.address}<br>
+                    <b>${order.pincode}</b> | Ph: <a href="tel:${order.customerMobile}">${order.customerMobile}</a>
+                </div>
+                <div style="background:#f9f9f9; padding:5px; font-size:0.85rem; border-radius:4px; margin-bottom:10px; color:#555;">
+                    ${itemStr}
+                </div>
+                <div class="action-row">${btnAction}</div>
             `;
+            list.appendChild(card);
         });
     },
 
-    updateOrder: (id, status) => {
-        db.ref(`orders/${id}`).update({status});
-        adminUI.toast(`Status updated to ${status}`);
+    setStatus: (oid, st) => {
+        db.ref(`orders/${oid}`).update({ status: st });
+        adminUI.toast("Order updated: " + st);
     },
 
-    loadRidersForModal: (orderId) => {
+    openRiderModal: (oid) => {
+        document.getElementById('modal-assign').classList.remove('hidden');
+        // Load Riders
+        const cont = document.getElementById('rider-list');
+        cont.innerHTML = 'Loading riders...';
+        
         db.ref('users').orderByChild('role').equalTo('DELIVERY').once('value').then(snap => {
-            const list = document.getElementById('assign-list-container');
-            list.innerHTML = '';
             const riders = snap.val() || {};
+            cont.innerHTML = '';
             
-            if(Object.keys(riders).length === 0) list.innerHTML = '<p>No Riders Found.</p>';
+            if(Object.keys(riders).length === 0) {
+                cont.innerHTML = "No Delivery Partners registered.";
+                return;
+            }
 
             Object.keys(riders).forEach(uid => {
                 const r = riders[uid];
-                const d = document.createElement('div');
-                d.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                                <span>${r.name}</span>
-                                <button class="btn-secondary" onclick="admin.assignOrder('${orderId}','${uid}','${r.name}')">Assign</button>
-                               </div>`;
-                list.appendChild(d);
+                const div = document.createElement('div');
+                div.className = 'admin-table-row';
+                div.innerHTML = `
+                    <div style="font-weight:bold;">${r.name}</div>
+                    <button class="btn-primary" style="font-size:0.8rem" onclick="admin.assign('${oid}', '${uid}', '${r.name}')">Assign</button>
+                `;
+                cont.appendChild(div);
             });
         });
     },
 
-    assignOrder: (oid, uid, name) => {
+    assign: (oid, uid, name) => {
         db.ref(`orders/${oid}`).update({ status: 'OUT_FOR_DELIVERY', deliveryPartnerId: uid, deliveryPartnerName: name });
-        document.getElementById('modal-assign-delivery').classList.add('hidden');
-        adminUI.toast(`Order assigned to ${name}`);
-        // Send Notification
-        db.ref(`fcmTokens/${uid}`).once('value').then(snap => {
-           if(snap.val() && window.notifications) window.notifications.sendToToken(snap.val(), "New Delivery", "New order assigned to you.");
-        });
+        adminUI.closeAll();
+        adminUI.toast(`Assigned to ${name}`);
     },
 
-    // ================= INVENTORY =================
+    // ============================================
+    //  INVENTORY MANAGEMENT (Tables & CRUD)
+    // ============================================
 
     listenInventory: () => {
+        // Fetch Categories
         db.ref('categories').on('value', snap => {
-            admin.categories = snap.val() || {};
-            admin.renderCategories();
+            admin.categoriesData = snap.val() || {};
+            admin.renderCategoryList();
         });
 
+        // Fetch Products
         db.ref('inventory').on('value', snap => {
-            admin.inventoryData = snap.val() || {};
+            admin.productsData = snap.val() || {};
             admin.renderInventory();
         });
     },
 
-    renderCategories: () => {
-        const list = document.getElementById('admin-categories-list');
-        list.innerHTML = '';
-        Object.keys(admin.categories).forEach(k => {
-            const c = admin.categories[k];
-            const div = document.createElement('div');
-            div.style = "background:white; border:1px solid #ccc; padding:5px 10px; border-radius:15px; display:inline-flex; align-items:center; min-width:max-content;";
-            div.innerHTML = `${c.name} <span class="material-icons-round" style="font-size:16px; margin-left:5px; color:red; cursor:pointer;" onclick="admin.deleteCategory('${k}')">close</span>`;
-            list.appendChild(div);
-            // also update modal selector logic is handled in UI open
-        });
+    renderCategoryList: () => {
+        const vis = document.getElementById('category-list-visual');
+        const select = document.getElementById('inv-cat-filter');
         
-        // Populate filter
-        const f = document.getElementById('inv-cat-filter');
-        // keep 'all'
-        while(f.options.length > 1) f.remove(1);
-        Object.keys(admin.categories).forEach(k => {
-             const o = document.createElement('option');
-             o.value = k; o.innerText = admin.categories[k].name;
-             f.appendChild(o);
+        vis.innerHTML = '';
+        // Clear Select except All
+        while(select.options.length > 1) select.remove(1);
+
+        Object.entries(admin.categoriesData).forEach(([key, cat]) => {
+            // Chip UI
+            const chip = document.createElement('div');
+            chip.style = "min-width:100px; padding:10px; background:white; border-radius:8px; border:1px solid #ccc; text-align:center;";
+            chip.innerHTML = `
+                <img src="${cat.imageUrl}" style="width:30px; height:30px;"><br>
+                <b>${cat.name}</b><br>
+                <button onclick="admin.delCategory('${key}')" style="color:red; background:none; border:none; margin-top:5px; cursor:pointer; font-size:0.8rem;">Delete</button>
+            `;
+            vis.appendChild(chip);
+
+            // Filter Dropdown
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.innerText = cat.name;
+            select.appendChild(opt);
         });
     },
 
-    saveCategory: () => {
-        const id = document.getElementById('cat-id').value;
-        const name = document.getElementById('cat-name').value;
-        const img = document.getElementById('cat-img').value;
-        const payload = { name, imageUrl: img || 'https://via.placeholder.com/50', status: 'ACTIVE' };
-        
-        if(id) db.ref(`categories/${id}`).update(payload);
-        else db.ref('categories').push(payload);
-        
-        document.getElementById('modal-category').classList.add('hidden');
-        adminUI.toast('Category Saved');
-    },
-
-    deleteCategory: (k) => {
-        if(confirm("Delete category?")) db.ref(`categories/${k}`).remove();
+    // Populate Category Select inside Add/Edit Modal dynamically
+    populateCategorySelect: () => {
+        const pCat = document.getElementById('p-cat');
+        pCat.innerHTML = '';
+        Object.entries(admin.categoriesData).forEach(([key, cat]) => {
+            const op = document.createElement('option');
+            op.value = key; op.innerText = cat.name;
+            pCat.appendChild(op);
+        });
     },
 
     renderInventory: () => {
-        const list = document.getElementById('admin-products-list');
-        list.innerHTML = '';
-        const catFilter = document.getElementById('inv-cat-filter').value;
-        
-        const products = Object.entries(admin.inventoryData);
-        if(products.length === 0) list.innerHTML = "<p>No Products Added.</p>";
+        const container = document.getElementById('product-list-container');
+        const filter = document.getElementById('inv-cat-filter').value;
+        container.innerHTML = '';
 
-        products.forEach(([key, p]) => {
-            if(catFilter !== 'all' && p.categoryId !== catFilter) return;
+        Object.entries(admin.productsData).forEach(([key, p]) => {
+            if(filter !== 'all' && p.categoryId !== filter) return;
 
             const div = document.createElement('div');
-            div.className = 'inv-row';
+            div.className = 'admin-table-row';
             div.innerHTML = `
-                <div class="inv-details">
+                <div style="display:flex; align-items:center;">
                     <img src="${p.imageUrl}">
                     <div>
-                        <div style="font-weight:bold">${p.name}</div>
-                        <small>₹${p.price} / ${p.unitLabel}</small><br>
-                        <small style="color:${p.availableQty > 0 ? 'green':'red'}">${p.availableQty > 0 ? 'In Stock':'Out Stock'}</small>
+                        <div class="bold">${p.name}</div>
+                        <div style="font-size:0.85rem; color:#666;">₹${p.price} / ${p.unitLabel}</div>
+                        ${p.availableQty <= 0 ? '<span style="color:red; font-size:0.8rem; font-weight:bold;">OUT OF STOCK</span>' : ''}
                     </div>
                 </div>
-                <div style="display:flex; gap:10px;">
-                    <i class="material-icons-round" style="color:#7f8c8d; cursor:pointer;" onclick='adminUI.openProductModal(${JSON.stringify({...p, id:key})})'>edit</i>
-                    <i class="material-icons-round" style="color:#e74c3c; cursor:pointer;" onclick="admin.deleteProduct('${key}')">delete</i>
+                <div class="row-actions">
+                    <i class="material-icons-round" style="color:blue" onclick='admin.editProduct(${JSON.stringify({...p, id:key})})'>edit</i>
+                    <i class="material-icons-round" style="color:red" onclick="admin.delProduct('${key}')">delete</i>
                 </div>
             `;
-            list.appendChild(div);
+            container.appendChild(div);
         });
     },
 
+    editProduct: (obj) => {
+        adminUI.modal('modal-product');
+        // Fill form
+        document.getElementById('p-id').value = obj.id;
+        document.getElementById('p-name').value = obj.name;
+        document.getElementById('p-price').value = obj.price;
+        document.getElementById('p-unit').value = obj.unitLabel;
+        document.getElementById('p-img').value = obj.imageUrl;
+        document.getElementById('p-cat').value = obj.categoryId;
+        document.getElementById('p-stock').value = obj.availableQty > 0 ? "true" : "false";
+    },
+
     saveProduct: () => {
-        const id = document.getElementById('prod-id').value;
+        const id = document.getElementById('p-id').value;
         const payload = {
-            name: document.getElementById('prod-name').value,
-            categoryId: document.getElementById('prod-category').value,
-            price: parseFloat(document.getElementById('prod-price').value),
-            unitLabel: document.getElementById('prod-unit').value,
-            imageUrl: document.getElementById('prod-img').value,
-            availableQty: document.getElementById('prod-stock').value === 'true' ? 100 : 0
+            name: document.getElementById('p-name').value,
+            price: parseFloat(document.getElementById('p-price').value),
+            unitLabel: document.getElementById('p-unit').value,
+            imageUrl: document.getElementById('p-img').value,
+            categoryId: document.getElementById('p-cat').value,
+            availableQty: document.getElementById('p-stock').value === "true" ? 100 : 0
         };
 
         if(id) db.ref(`inventory/${id}`).update(payload);
         else db.ref('inventory').push(payload);
         
-        document.getElementById('modal-product').classList.add('hidden');
-        adminUI.toast('Product Saved');
+        adminUI.closeAll();
+        adminUI.toast("Item Saved Successfully");
     },
 
-    deleteProduct: (key) => {
-        if(confirm("Delete product?")) db.ref(`inventory/${key}`).remove();
+    saveCategory: () => {
+        const name = document.getElementById('c-name').value;
+        if(!name) return;
+        const img = document.getElementById('c-img').value || 'https://via.placeholder.com/50';
+        
+        db.ref('categories').push({ name, imageUrl: img, status:'ACTIVE' });
+        adminUI.closeAll();
+        adminUI.toast("Category Created");
     },
 
-    // ================= SETTINGS =================
+    delProduct: (k) => { if(confirm("Remove item?")) db.ref(`inventory/${k}`).remove(); },
+    delCategory: (k) => { if(confirm("Remove Category? Items linked to this might break!")) db.ref(`categories/${k}`).remove(); },
 
-    listenSettings: () => {
+    // ============================================
+    //  SETTINGS (CONFIG & PINCODES)
+    // ============================================
+
+    listenConfig: () => {
         db.ref('config').on('value', snap => {
-            const data = snap.val() || {};
-            // Inputs
-            if(document.activeElement !== document.getElementById('conf-del-charge')) 
-                document.getElementById('conf-del-charge').value = data.deliveryCharge || 0;
-            
-            if(document.activeElement !== document.getElementById('conf-surge')) 
-                document.getElementById('conf-surge').value = data.surge || 0;
+            const conf = snap.val() || {};
+            // Charges
+            if(document.activeElement.id !== 'conf-charge') document.getElementById('conf-charge').value = conf.deliveryCharge || 0;
+            if(document.activeElement.id !== 'conf-surge') document.getElementById('conf-surge').value = conf.surge || 0;
 
             // Pincodes
-            const pinDiv = document.getElementById('pincode-list');
+            const pinDiv = document.getElementById('pincode-list-visual');
             pinDiv.innerHTML = '';
-            if(data.pincodes) {
-                Object.keys(data.pincodes).forEach(k => {
-                    const pin = data.pincodes[k];
-                    const span = document.createElement('span');
-                    span.className = 'pin-chip';
-                    span.innerHTML = `${pin} <i class="material-icons-round" onclick="admin.deletePincode('${k}')">close</i>`;
-                    pinDiv.appendChild(span);
+            if(conf.pincodes) {
+                Object.entries(conf.pincodes).forEach(([key, val]) => {
+                    const ch = document.createElement('div');
+                    ch.className = 'chip';
+                    ch.innerHTML = `${val} <i class="material-icons-round" onclick="admin.delPin('${key}')">cancel</i>`;
+                    pinDiv.appendChild(ch);
                 });
             }
         });
     },
 
-    saveConfig: () => {
-        db.ref('config').update({
-            deliveryCharge: parseInt(document.getElementById('conf-del-charge').value),
-            surge: parseInt(document.getElementById('conf-surge').value)
-        });
-        adminUI.toast("Settings Saved");
+    saveSettings: () => {
+        const c = parseInt(document.getElementById('conf-charge').value);
+        const s = parseInt(document.getElementById('conf-surge').value);
+        db.ref('config').update({ deliveryCharge: c, surge: s });
+        adminUI.toast("Pricing Updated");
     },
 
     addPincode: () => {
         const p = document.getElementById('new-pincode').value;
         if(p.length === 6) db.ref('config/pincodes').push(p);
-        else alert("Need 6 Digits");
+        else alert("6 Digit Required");
         document.getElementById('new-pincode').value = '';
     },
 
-    deletePincode: (k) => {
-        db.ref(`config/pincodes/${k}`).remove();
-    }
+    delPin: (k) => db.ref(`config/pincodes/${k}`).remove()
 };
