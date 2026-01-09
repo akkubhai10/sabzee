@@ -1,6 +1,6 @@
 /**
- * SabziXpress - Admin Controller (Full Logic)
- * Ensures robust reading of Order Data, Inventory, and Settings.
+ * SabziXpress - Admin Debugged Logic
+ * Handling Rendering & Error Reporting accurately
  */
 
 const admin = {
@@ -10,302 +10,282 @@ const admin = {
     configData: {},
 
     init: () => {
-        console.log("Admin Loaded... syncing data.");
-        // Initialize listeners
-        admin.listenOrders();
-        admin.listenInventory();
-        admin.listenConfig();
+        console.log("Admin Dashboard Logic Started...");
+        admin.checkPermissions(); // Check notifications
+        admin.loadAllData();
     },
 
-    // ============================================
-    //  ORDERS & STATS
-    // ============================================
+    checkPermissions: () => {
+        const el = document.getElementById('fcm-status');
+        if(el) {
+            el.innerText = Notification.permission === 'granted' ? '🔔 Alerts ON' : '🔕 Alerts OFF';
+        }
+    },
 
-    listenOrders: () => {
-        db.ref('orders').orderByChild('createdAt').limitToLast(100).on('value', snap => {
+    loadAllData: () => {
+        // 1. ORDERS
+        db.ref('orders').limitToLast(100).on('value', snap => {
             admin.ordersData = snap.val() || {};
             admin.renderOrders();
             admin.calcStats();
+        }, error => alert("Error loading Orders: " + error.message));
+
+        // 2. CATEGORIES
+        db.ref('categories').on('value', snap => {
+            admin.categoriesData = snap.val() || {};
+            admin.renderCategories();
+        });
+
+        // 3. INVENTORY (Items)
+        db.ref('inventory').on('value', snap => {
+            admin.productsData = snap.val() || {};
+            admin.renderInventory(); // This handles rendering
+        });
+
+        // 4. CONFIG (Pincodes)
+        db.ref('config').on('value', snap => {
+            admin.configData = snap.val() || {};
+            admin.renderConfig();
         });
     },
 
+    // ================== RENDER LOGIC ==================
+
     calcStats: () => {
         const todayStr = new Date().toDateString();
-        let total = 0;
+        let sales = 0;
         let count = 0;
-
         Object.values(admin.ordersData).forEach(o => {
-            if(!o.createdAt) return;
-            const d = new Date(o.createdAt).toDateString();
-            if(d === todayStr && o.status !== 'CANCELLED') {
-                total += (o.amount.grandTotal || 0);
+            if(new Date(o.createdAt).toDateString() === todayStr && o.status !== 'CANCELLED') {
+                sales += (o.amount.grandTotal || 0);
                 count++;
             }
         });
-        
-        // Update DOM safely
-        if(document.getElementById('stat-sales')) document.getElementById('stat-sales').innerText = `₹${total}`;
+        if(document.getElementById('stat-sales')) document.getElementById('stat-sales').innerText = `₹${sales}`;
         if(document.getElementById('stat-count')) document.getElementById('stat-count').innerText = count;
     },
 
     renderOrders: () => {
         const list = document.getElementById('orders-list');
-        const filter = document.getElementById('order-filter').value;
+        const filter = document.getElementById('order-filter') ? document.getElementById('order-filter').value : 'ALL';
         list.innerHTML = '';
 
         const arr = Object.entries(admin.ordersData).sort((a,b) => b[1].createdAt - a[1].createdAt);
+        
+        if(arr.length === 0) list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">No Active Orders.</p>';
 
-        if(arr.length === 0) {
-            list.innerHTML = `<div class="text-center" style="padding:40px; color:#888;">No Active Orders</div>`;
-            return;
-        }
+        arr.forEach(([key, o]) => {
+            if(filter !== 'ALL' && o.status !== filter) return;
+            // Also skip Closed if looking at ALL
+            if(filter === 'ALL' && o.status === 'CLOSED') return;
 
-        arr.forEach(([key, order]) => {
-            if(filter !== 'ALL' && order.status !== filter) return;
-            // Also hide closed if ALL
-            if(filter === 'ALL' && order.status === 'CLOSED') return;
+            // Generate Button HTML
+            let actionBtn = `<strong style="color:gray">${o.status}</strong>`;
+            if(o.status === 'PLACED') actionBtn = `<button class="btn-primary" onclick="admin.setOrder('${key}', 'PACKING')">Accept Order</button>`;
+            else if(o.status === 'PACKING') actionBtn = `<button class="btn-primary" style="background:#2980b9" onclick="admin.setOrder('${key}', 'PACKED')">Mark Packed</button>`;
+            else if(o.status === 'PACKED') actionBtn = `<button class="btn-primary" style="background:#f1c40f; color:#000" onclick="adminUI.modal('modal-assign', '${key}')">Assign Rider</button>`;
+            else if(o.status === 'OUT_FOR_DELIVERY') actionBtn = `<small>Assigned: ${o.deliveryPartnerName}</small>`;
 
-            let btnAction = '';
-            
-            // State Machine for Buttons
-            if(order.status === 'PLACED') {
-                btnAction = `<button class="btn-primary" onclick="admin.setStatus('${key}','PACKING')">ACCEPT & PACK</button>`;
-            } else if (order.status === 'PACKING') {
-                btnAction = `<button class="btn-primary" style="background:#2980b9" onclick="admin.setStatus('${key}','PACKED')">MARK PACKED</button>`;
-            } else if (order.status === 'PACKED') {
-                btnAction = `<button class="btn-primary" style="background:#f39c12; color:#000" onclick="admin.openRiderModal('${key}')">ASSIGN RIDER</button>`;
-            } else {
-                btnAction = `<span style="font-weight:bold; color:green">${order.status}</span>`;
-            }
-
-            // Items List
-            let itemStr = '';
-            if(order.items) order.items.forEach(i => itemStr += `${i.qty} x ${i.name} `);
+            let itemsTxt = o.items ? o.items.map(i => `${i.qty} x ${i.name}`).join(', ') : 'No items info';
 
             const card = document.createElement('div');
-            card.className = `order-card ${order.status}`; // Uses style.css color codes
+            card.className = `order-card ${o.status}`;
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span class="bold">#${key.slice(-4)} ${order.customerName}</span>
-                    <span class="bold">₹${order.amount.grandTotal}</span>
+                    <strong>#${key.slice(-4)} (${o.customerName})</strong>
+                    <strong>₹${o.amount.grandTotal}</strong>
                 </div>
-                <div style="font-size:0.9rem; margin-bottom:10px;">
-                    ${order.address}<br>
-                    <b>${order.pincode}</b> | Ph: <a href="tel:${order.customerMobile}">${order.customerMobile}</a>
+                <div style="font-size:0.9rem; color:#555; margin-bottom:8px;">
+                    ${o.address} (${o.pincode})
                 </div>
-                <div style="background:#f9f9f9; padding:5px; font-size:0.85rem; border-radius:4px; margin-bottom:10px; color:#555;">
-                    ${itemStr}
+                <div style="background:#eee; padding:5px; font-size:0.85rem; margin-bottom:10px;">
+                    ${itemsTxt}
                 </div>
-                <div class="action-row">${btnAction}</div>
+                <div style="text-align:right;">${actionBtn}</div>
             `;
             list.appendChild(card);
         });
     },
 
-    setStatus: (oid, st) => {
-        db.ref(`orders/${oid}`).update({ status: st });
-        adminUI.toast("Order updated: " + st);
-    },
-
-    openRiderModal: (oid) => {
-        document.getElementById('modal-assign').classList.remove('hidden');
-        // Load Riders
-        const cont = document.getElementById('rider-list');
-        cont.innerHTML = 'Loading riders...';
+    renderCategories: () => {
+        const visual = document.getElementById('category-list-visual');
+        const filterSel = document.getElementById('inv-cat-filter');
         
-        db.ref('users').orderByChild('role').equalTo('DELIVERY').once('value').then(snap => {
-            const riders = snap.val() || {};
-            cont.innerHTML = '';
-            
-            if(Object.keys(riders).length === 0) {
-                cont.innerHTML = "No Delivery Partners registered.";
-                return;
-            }
+        if(visual) visual.innerHTML = '';
+        if(filterSel) {
+            // keep 'Show All' option
+            while(filterSel.options.length > 1) filterSel.remove(1);
+        }
 
-            Object.keys(riders).forEach(uid => {
-                const r = riders[uid];
-                const div = document.createElement('div');
-                div.className = 'admin-table-row';
-                div.innerHTML = `
-                    <div style="font-weight:bold;">${r.name}</div>
-                    <button class="btn-primary" style="font-size:0.8rem" onclick="admin.assign('${oid}', '${uid}', '${r.name}')">Assign</button>
+        Object.entries(admin.categoriesData).forEach(([k, c]) => {
+            // Update Chip List
+            if(visual) {
+                visual.innerHTML += `
+                    <div style="min-width:120px; text-align:center; padding:10px; border:1px solid #ddd; border-radius:10px; background:white;">
+                        <img src="${c.imageUrl}" style="width:40px; height:40px;"><br>
+                        <strong>${c.name}</strong><br>
+                        <small onclick="admin.delCat('${k}')" style="color:red; cursor:pointer;">Delete</small>
+                    </div>
                 `;
-                cont.appendChild(div);
-            });
-        });
-    },
-
-    assign: (oid, uid, name) => {
-        db.ref(`orders/${oid}`).update({ status: 'OUT_FOR_DELIVERY', deliveryPartnerId: uid, deliveryPartnerName: name });
-        adminUI.closeAll();
-        adminUI.toast(`Assigned to ${name}`);
-    },
-
-    // ============================================
-    //  INVENTORY MANAGEMENT (Tables & CRUD)
-    // ============================================
-
-    listenInventory: () => {
-        // Fetch Categories
-        db.ref('categories').on('value', snap => {
-            admin.categoriesData = snap.val() || {};
-            admin.renderCategoryList();
-        });
-
-        // Fetch Products
-        db.ref('inventory').on('value', snap => {
-            admin.productsData = snap.val() || {};
-            admin.renderInventory();
-        });
-    },
-
-    renderCategoryList: () => {
-        const vis = document.getElementById('category-list-visual');
-        const select = document.getElementById('inv-cat-filter');
-        
-        vis.innerHTML = '';
-        // Clear Select except All
-        while(select.options.length > 1) select.remove(1);
-
-        Object.entries(admin.categoriesData).forEach(([key, cat]) => {
-            // Chip UI
-            const chip = document.createElement('div');
-            chip.style = "min-width:100px; padding:10px; background:white; border-radius:8px; border:1px solid #ccc; text-align:center;";
-            chip.innerHTML = `
-                <img src="${cat.imageUrl}" style="width:30px; height:30px;"><br>
-                <b>${cat.name}</b><br>
-                <button onclick="admin.delCategory('${key}')" style="color:red; background:none; border:none; margin-top:5px; cursor:pointer; font-size:0.8rem;">Delete</button>
-            `;
-            vis.appendChild(chip);
-
-            // Filter Dropdown
-            const opt = document.createElement('option');
-            opt.value = key;
-            opt.innerText = cat.name;
-            select.appendChild(opt);
-        });
-    },
-
-    // Populate Category Select inside Add/Edit Modal dynamically
-    populateCategorySelect: () => {
-        const pCat = document.getElementById('p-cat');
-        pCat.innerHTML = '';
-        Object.entries(admin.categoriesData).forEach(([key, cat]) => {
-            const op = document.createElement('option');
-            op.value = key; op.innerText = cat.name;
-            pCat.appendChild(op);
+            }
+            // Update Dropdown Filter
+            if(filterSel) {
+                const o = document.createElement('option');
+                o.value = k; o.innerText = c.name;
+                filterSel.appendChild(o);
+            }
         });
     },
 
     renderInventory: () => {
         const container = document.getElementById('product-list-container');
-        const filter = document.getElementById('inv-cat-filter').value;
+        if(!container) return; // Guard
+
+        const catFilter = document.getElementById('inv-cat-filter').value;
         container.innerHTML = '';
 
-        Object.entries(admin.productsData).forEach(([key, p]) => {
-            if(filter !== 'all' && p.categoryId !== filter) return;
+        const arr = Object.entries(admin.productsData);
+        
+        if(arr.length === 0) {
+            container.innerHTML = "<p>No Products in Inventory. Add some.</p>";
+            return;
+        }
 
-            const div = document.createElement('div');
-            div.className = 'admin-table-row';
-            div.innerHTML = `
+        arr.forEach(([key, p]) => {
+            // If filtering and no match, skip
+            if(catFilter !== 'all' && p.categoryId !== catFilter) return;
+
+            const row = document.createElement('div');
+            row.className = 'admin-table-row';
+            row.innerHTML = `
                 <div style="display:flex; align-items:center;">
-                    <img src="${p.imageUrl}">
-                    <div>
+                    <img src="${p.imageUrl}" alt="item">
+                    <div style="margin-left:10px;">
                         <div class="bold">${p.name}</div>
-                        <div style="font-size:0.85rem; color:#666;">₹${p.price} / ${p.unitLabel}</div>
-                        ${p.availableQty <= 0 ? '<span style="color:red; font-size:0.8rem; font-weight:bold;">OUT OF STOCK</span>' : ''}
+                        <div style="font-size:0.85rem">₹${p.price} / ${p.unitLabel}</div>
+                        ${p.availableQty > 0 ? '<small style="color:green">In Stock</small>' : '<small style="color:red">Out of Stock</small>'}
                     </div>
                 </div>
-                <div class="row-actions">
-                    <i class="material-icons-round" style="color:blue" onclick='admin.editProduct(${JSON.stringify({...p, id:key})})'>edit</i>
-                    <i class="material-icons-round" style="color:red" onclick="admin.delProduct('${key}')">delete</i>
+                <div>
+                    <button style="border:none; background:none; cursor:pointer;" onclick='adminUI.modal("modal-product", ${JSON.stringify({...p, id:key})})'>✏️</button>
+                    <button style="border:none; background:none; cursor:pointer;" onclick="admin.delProduct('${key}')">🗑️</button>
                 </div>
             `;
-            container.appendChild(div);
+            container.appendChild(row);
         });
     },
 
-    editProduct: (obj) => {
-        adminUI.modal('modal-product');
-        // Fill form
-        document.getElementById('p-id').value = obj.id;
-        document.getElementById('p-name').value = obj.name;
-        document.getElementById('p-price').value = obj.price;
-        document.getElementById('p-unit').value = obj.unitLabel;
-        document.getElementById('p-img').value = obj.imageUrl;
-        document.getElementById('p-cat').value = obj.categoryId;
-        document.getElementById('p-stock').value = obj.availableQty > 0 ? "true" : "false";
+    renderConfig: () => {
+        // Pincodes
+        const list = document.getElementById('pincode-list-visual');
+        if(list && admin.configData.pincodes) {
+            list.innerHTML = '';
+            Object.entries(admin.configData.pincodes).forEach(([k, v]) => {
+                list.innerHTML += `<div class="chip">${v} <i class="material-icons-round" onclick="admin.delPin('${k}')">close</i></div>`;
+            });
+        }
+        // Inputs
+        if(document.getElementById('conf-charge')) document.getElementById('conf-charge').value = admin.configData.deliveryCharge || 0;
+        if(document.getElementById('conf-surge')) document.getElementById('conf-surge').value = admin.configData.surge || 0;
+    },
+
+    // ================== ACTIONS ==================
+
+    setOrder: (k, s) => db.ref(`orders/${k}`).update({status: s}),
+    
+    saveCategory: () => {
+        const name = document.getElementById('c-name').value;
+        const img = document.getElementById('c-img').value;
+        if(!name) return alert("Category Name Required");
+        
+        db.ref('categories').push({ name, imageUrl: img || '', status: 'ACTIVE' })
+        .then(() => { adminUI.closeAll(); adminUI.toast("Category Added!"); })
+        .catch(err => alert("Error: " + err.message));
     },
 
     saveProduct: () => {
         const id = document.getElementById('p-id').value;
         const payload = {
             name: document.getElementById('p-name').value,
-            price: parseFloat(document.getElementById('p-price').value),
+            categoryId: document.getElementById('p-cat').value,
+            price: Number(document.getElementById('p-price').value),
             unitLabel: document.getElementById('p-unit').value,
             imageUrl: document.getElementById('p-img').value,
-            categoryId: document.getElementById('p-cat').value,
-            availableQty: document.getElementById('p-stock').value === "true" ? 100 : 0
+            availableQty: document.getElementById('p-stock').value === 'true' ? 100 : 0
         };
 
-        if(id) db.ref(`inventory/${id}`).update(payload);
-        else db.ref('inventory').push(payload);
+        if(!payload.categoryId) return alert("Select a Category First!");
+        if(!payload.name) return alert("Enter Product Name");
+
+        const ref = id ? db.ref(`inventory/${id}`) : db.ref('inventory').push();
         
-        adminUI.closeAll();
-        adminUI.toast("Item Saved Successfully");
+        (id ? ref.update(payload) : ref.set(payload))
+        .then(() => { adminUI.closeAll(); adminUI.toast("Product Saved!"); })
+        .catch(err => alert("Write Error: " + err.message));
     },
 
-    saveCategory: () => {
-        const name = document.getElementById('c-name').value;
-        if(!name) return;
-        const img = document.getElementById('c-img').value || 'https://via.placeholder.com/50';
-        
-        db.ref('categories').push({ name, imageUrl: img, status:'ACTIVE' });
-        adminUI.closeAll();
-        adminUI.toast("Category Created");
-    },
-
-    delProduct: (k) => { if(confirm("Remove item?")) db.ref(`inventory/${k}`).remove(); },
-    delCategory: (k) => { if(confirm("Remove Category? Items linked to this might break!")) db.ref(`categories/${k}`).remove(); },
-
-    // ============================================
-    //  SETTINGS (CONFIG & PINCODES)
-    // ============================================
-
-    listenConfig: () => {
-        db.ref('config').on('value', snap => {
-            const conf = snap.val() || {};
-            // Charges
-            if(document.activeElement.id !== 'conf-charge') document.getElementById('conf-charge').value = conf.deliveryCharge || 0;
-            if(document.activeElement.id !== 'conf-surge') document.getElementById('conf-surge').value = conf.surge || 0;
-
-            // Pincodes
-            const pinDiv = document.getElementById('pincode-list-visual');
-            pinDiv.innerHTML = '';
-            if(conf.pincodes) {
-                Object.entries(conf.pincodes).forEach(([key, val]) => {
-                    const ch = document.createElement('div');
-                    ch.className = 'chip';
-                    ch.innerHTML = `${val} <i class="material-icons-round" onclick="admin.delPin('${key}')">cancel</i>`;
-                    pinDiv.appendChild(ch);
-                });
-            }
-        });
-    },
-
-    saveSettings: () => {
-        const c = parseInt(document.getElementById('conf-charge').value);
-        const s = parseInt(document.getElementById('conf-surge').value);
-        db.ref('config').update({ deliveryCharge: c, surge: s });
-        adminUI.toast("Pricing Updated");
-    },
+    delCat: (k) => confirm("Delete Category?") ? db.ref(`categories/${k}`).remove() : null,
+    delProduct: (k) => confirm("Delete Product?") ? db.ref(`inventory/${k}`).remove() : null,
+    delPin: (k) => db.ref(`config/pincodes/${k}`).remove(),
 
     addPincode: () => {
         const p = document.getElementById('new-pincode').value;
-        if(p.length === 6) db.ref('config/pincodes').push(p);
-        else alert("6 Digit Required");
+        if(p.length===6) db.ref('config/pincodes').push(p);
         document.getElementById('new-pincode').value = '';
     },
+    
+    saveSettings: () => {
+        db.ref('config').update({
+            deliveryCharge: Number(document.getElementById('conf-charge').value),
+            surge: Number(document.getElementById('conf-surge').value)
+        }).then(() => adminUI.toast("Settings Saved"));
+    }
+};
 
-    delPin: (k) => db.ref(`config/pincodes/${k}`).remove()
+// HELPER TO POPULATE SELECT
+adminUI.modal = (id, dataOrId = null) => {
+    // Hide all
+    document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+    
+    // Fill category Select for product modal
+    if(id === 'modal-product') {
+        const sel = document.getElementById('p-cat');
+        sel.innerHTML = '';
+        if(Object.keys(admin.categoriesData).length === 0) {
+            alert("No Categories found! Create a Category first.");
+            return;
+        }
+        Object.entries(admin.categoriesData).forEach(([k, c]) => {
+            const op = document.createElement('option');
+            op.value = k; op.innerText = c.name;
+            sel.appendChild(op);
+        });
+    }
+
+    // Logic for specific modals
+    if(id === 'modal-product') {
+        if(dataOrId && typeof dataOrId === 'object') {
+            // EDIT MODE
+            const d = dataOrId;
+            document.getElementById('p-id').value = d.id;
+            document.getElementById('p-name').value = d.name;
+            document.getElementById('p-price').value = d.price;
+            document.getElementById('p-unit').value = d.unitLabel;
+            document.getElementById('p-img').value = d.imageUrl;
+            document.getElementById('p-cat').value = d.categoryId;
+            document.getElementById('p-stock').value = d.availableQty > 0 ? "true" : "false";
+        } else {
+            // NEW MODE
+            document.getElementById('p-id').value = "";
+            document.getElementById('p-name').value = "";
+            document.getElementById('p-price').value = "";
+        }
+    }
+    
+    if(id === 'modal-assign') {
+        admin.openRiderModal(dataOrId); // here dataOrId is order ID
+        return; // admin.openRiderModal handles visibility
+    }
+
+    document.getElementById(id).classList.remove('hidden');
 };
